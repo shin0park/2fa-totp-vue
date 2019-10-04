@@ -1,0 +1,31 @@
+{
+  "name": "2fa-totp",
+  "version": "0.0.1",
+  "description": "two factor authentication with node.js",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon app.js"
+  },
+  "author": "shinyoung",
+  "license": "MIT",
+  "dependencies": {
+    "bcrypt-nodejs": "0.0.3",
+    "connect-flash": "^0.1.1",
+    "cookie-parser": "^1.4.4",
+    "dotenv": "^8.0.0",
+    "ejs": "^2.6.2",
+    "express": "^4.17.1",
+    "express-session": "^1.16.2",
+    "morgan": "^1.9.1",
+    "mysql2": "^1.6.5",
+    "passport": "^0.4.0",
+    "passport-local": "^1.0.0",
+    "qrcode": "^1.4.1",
+    "sequelize": "^5.10.1",
+    "speakeasy": "^2.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^1.19.1"
+  }
+}

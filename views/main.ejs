@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" type="text/css">
+    <script src="https://unpkg.com/vue/dist/vue.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/vue-router/dist/vue-router.js"></script>
+</head>
+
+<body>
+    <div id="app" class="container">
+        <div class="row">
+            <h1>TFA</h1>
+            <div v-if="!user">
+                <router-link to="/login">Go to login</router-link>
+            </div>
+            <template>
+                <div>
+                    <router-view></router-view>
+                </div>
+            </template>
+        </div>
+    </div>
+</body>
+<script>
+    const NotFoundComponent = { template: '<p>Page not found</p>' }
+    const Home = { template: '<div>Welcome</div>' }
+    const Login = {
+        template: `
+                    <div class="col-md-4 col-md-offset-4">
+                        <form>
+                            <div class="form-group">
+                                <label for="email">Username:</label>
+                                <input v-model="email" type="email" class="form-control" id="email">
+                            </div>
+                            <div class="form-group">
+                                <label for="password">Password:</label>
+                                <input v-model="password" type="password" class="form-control" id="password">
+                            </div>
+                            <div>
+                                <button v-on:click="login(email, password)" type="button" class="btn btn-default">Login</button>
+                                <button v-on:click="toJoin()" type="button" class="btn btn-default">Join</button>
+                            </div>
+                        </form>
+                    </div>
+            `,
+        methods: {
+            login: function (email, password) {
+                axios.post('/login', { email: email, password: password }).then(res => {
+                    if (res.data == "loginError") {
+                        this.email = "";
+                        this.password = "";
+                        return alert("아이디 및 비밀번호가 일치하지 않습니다.");
+                    } else if (res.data == "otpAccess") {
+                        router.push('/otp');//otp 설정이 되어있는경우 otp입력페이지로 
+                    } else {
+                        alert("로그인 되었습니다.");
+                        router.push('/setup');//otp 해제되어있을 경우 
+                    }
+                    return window.location.reload();
+                }).catch(err => {
+                    alert("Invalid creds");
+                });
+            },
+            toJoin: function () {
+                router.push('/join');//회원가입으로
+            },
+        },
+        data: function () {
+            return {
+                email: "",
+                password: "",
+            }
+        }
+    }
+    const Join = {
+        template: `
+                    <div class="col-md-4 col-md-offset-4">
+                        <form>
+                            <div class="form-group">
+                                <label for="email">Username:</label>
+                                <input v-model="email" type="email" class="form-control" id="email">
+                            </div>
+                            <div class="form-group">
+                                <label for="password">Password:</label>
+                                <input v-model="password" type="password" class="form-control" id="password">
+                            </div>
+                            <div class="form-group">
+                                <label for="nick">Nickname:</label>
+                                <input v-model="nick" type="text" class="form-control" id="nick">
+                            </div>
+                            <button v-on:click="join(email, password, nick)" type="button" class="btn btn-default">Join</button>
+                        </form>
+                    </div>
+            `,
+        methods: {
+            join: function (email, password, nick) {
+                axios.post('/join', { email: email, password: password, nick: nick }).then(res => {
+                    if (res.data == "joinError") {
+                        this.email = "";
+                        this.password = "";
+                        this.nick = "";
+                        return alert("이미 가입된 이메일입니다.");
+                    } else {
+                        alert("가입이 완료되었습니다.");
+                        return router.push('/login');//회원가입 완료후 로그인페이지로
+                    }
+                }).catch(err => {
+                    alert("Invalid creds");
+                });
+            }
+        },
+        data: function () {
+            return {
+                email: "",
+                password: "",
+                nick: ""
+            }
+        }
+    }
+    const Otp = {
+        template: `
+                <div class="col-md-4 col-md-offset-4">
+                    <form>
+                        <div class="form-group">
+                            <label for="otp">Enter Otp:</label>
+                            <input v-model="otp" type="text" class="form-control" id="otp">
+                        </div>
+                        <button v-on:click="login(otp)" type="button" class="btn btn-default">Submit</button>
+                    </form>
+                </div>
+            ` ,
+        data: function () {
+            return {
+                otp: ""
+
+            }
+        },
+        methods: {
+            login: function (otp) {
+                const body = {
+                    token: otp
+                }
+                axios.post('/otp', body).then((res) => {
+                    if (res.data == "otpError") {
+                        this.otp = "";
+                        return alert("otp 인증번호가 일치하지 않습니다.");
+                    } else if (res.data == "otpEmpty") {
+                        return alert("otp 인증번호를 입력해주세요.");
+                    }
+                    alert("otp 인증이 완료되었습니다.");
+                    return router.push('/setup');//otp인증까지 완료로 로그인 성공
+                }).catch(err => {
+                    alert("Invalid");
+                });
+            }
+        }
+    }
+    const Setup = {
+        template: `
+                <div>
+                    <div class="col-md-4 col-md-offset-4" v-if="twofactor.secret">
+                        <h3>Current Settings</h3>
+                        <img :src="twofactor.dataURL" class="img-thumbnail"/>
+                        <p>Secret - {{twofactor.secret || twofactor.tempSecret}}</p>
+                        <p>Type - TOTP</p>
+                    </div>
+                    <div class="col-md-4 col-md-offset-4" v-if="!twofactor.secret">
+                        <h3>Setup Otp</h3>
+                        <div>
+                            <button v-on:click="setup()" type="button" class="btn btn-default">Enable</button>
+                        </div>
+                        <span v-if="!!twofactor.tempSecret">
+                            <p>Google Authenticator 앱을 다운로드합니다.</p>
+                            <p>앱에서 계정설정을 선택합니다.</p>
+                            <p>바코드 스캔을 선택합니다.</p>
+                            <p>스캔할 수 없을 경우, 직접입력에서 이메일 주소와 제공된 키를 입력합니다.</p>
+                            <img :src="twofactor.dataURL" class="img-thumbnail">
+                            <p>Secret Key - {{twofactor.tempSecret}}</p>
+                            <p>Type - TOTP</p>
+                            <form>
+                                <div class="form-group">
+                                    <label for="otp">Enter Otp:</label>
+                                    <input v-model="otp" type="otp" class="form-control" id="otp">
+                                </div>
+                                <button v-on:click="confirm(otp)" type="button" class="btn btn-default">confirm</button>
+                            </form>
+                        </span>
+                    </div>
+                    <div class="col-md-1">
+                        <div class="form-group">
+                            <h3>Disable</h3>
+                            <form>
+                                <button v-on:click="disable()" type="button" class="btn btn-danger">Disable</button>
+                            </form>
+                        </div>
+                        <div class="form-group">
+                            <h3>Logout</h3>
+                            <button v-on:click="toLogout()" type="button" class="btn btn-default">Logout</button>
+                        </div>
+                    </div>
+                  
+                </div>
+            `,
+        methods: {
+            setup: function () {
+                axios.post('/setup').then(res => {// 요청시 서버에서 secretkey와 이에 해당하는 qrcode 생성 후 결과 값 응답.
+                    const result = res.data;
+                    alert(result.message);
+                    this.twofactor = result;
+                }).catch(err => {
+                    alert("Invalid setup");
+                });
+            },
+
+            confirm: function (otp) {//otp setting시 otp인증번호 인증
+                const body = {
+                    token: otp,
+                    tempSecret: this.twofactor.tempSecret
+                }
+                axios.post('/verify', body).then(res => { //setting 시 주어진 secretkey의 otp번호와 사용자가 입력한 인증번호와 일치한지 검사.
+                    const result = res.data;
+                    if (res.status === 200) {
+                        if (res.data == "notVerified") {
+                            this.otp = "";
+                            return alert('otp 인증번호가 일치하지 않습니다.');
+                        } else if (res.data == "otpEmpty") {
+                            return alert('otp 인증번호를 입력해주세요.');
+                        }
+                        this.twofactor.secret = this.twofactor.tempSecret;// setting완료. secretkey 값 저장.
+                        this.twofactor.tempSecret = "";
+                    }
+                }).catch(err => alert('invalid otp'));
+            },
+
+            disable: function () {//otp 해지
+                axios.delete('/setup').then(res => {
+                    const result = res.data;
+                    if (res.status === 200) {
+                        if (res.data == "alreayDelete") {
+                            alert('이미 해제되었습니다.');
+                        } else {
+                            alert('2차인증서비스 otp가 해제되었습니다.');
+                        }
+                        return window.location.reload();
+                    }
+                }).catch(err => alert('error occured'));
+            },
+            toLogout: () => {//로그아웃
+                axios.get('/logout').then(res => {
+                    if (res.data == "logout") {
+                        alert("로그아웃.");
+                        router.push('/');
+                        return window.location.reload();
+                    }
+
+                }).catch(err => alert('invalid logout'));
+            }
+        },
+        data: function () {
+            return {
+                twofactor: {
+                    secret: "",
+                    tempSecret: "",
+                    dataURL: "",
+                    otpURL: ""
+                },
+                otp: ""
+            }
+        },
+        created: function () {//create 될때마다 로그인된 사용자의 data 가져옴.
+            axios.get('/setup').then(res => {
+                const result = res.data;
+                if (res.status === 200 && !!result.secret) {
+                    this.twofactor = result;
+                }
+            }).catch((err) => {
+                if (err.status === 401) {
+                    router.push('/login');
+                }
+            });
+        }
+
+    }
+
+    const routes = [
+        { path: '/', component: Home },
+        { path: '/join', component: Join },
+        { path: '/otp', component: Otp },
+        { path: '/login', component: Login },
+        { path: '/setup', component: Setup },
+        { path: '*', component: NotFoundComponent }
+    ];
+    const router = new VueRouter({
+        routes 
+    });
+  
+    const app = new Vue({
+        router,
+        data: function () {
+            return {
+                user: "<%= user %>" //현재 로그인된 사용자
+            }
+        }
+    }).$mount('#app');
+</script>
+
+</html>
